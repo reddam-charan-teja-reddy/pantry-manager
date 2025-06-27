@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import AppLayout from '@/components/Applayout/AppLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +11,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchPantryItems } from '@/store/pantrySlice';
+import { PantryItem } from '@/lib/types';
 import { addDays, isBefore } from 'date-fns';
 import {
   UtensilsCrossed,
@@ -23,11 +26,24 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function Dashboard() {
-  const pantryItems = useAppSelector((state) => state.pantry);
+  const dispatch = useAppDispatch();
+  const { items: pantryItems, loading } = useAppSelector(
+    (state) => state.pantry
+  );
   const recipes = useAppSelector((state) => state.recipes);
+  const { authState, userDetails } = useAppSelector((state) => state.user);
 
-  const expiringSoonCount = pantryItems.filter((item) =>
-    isBefore(new Date(item.expiryDate), addDays(new Date(), 3))
+  // Load pantry items once when the dashboard mounts if user is available
+  useEffect(() => {
+    if (authState && userDetails.uid && pantryItems.length === 0 && !loading) {
+      dispatch(fetchPantryItems(userDetails.uid));
+    }
+  }, [authState, userDetails.uid, dispatch, pantryItems.length, loading]);
+
+  const expiringSoonCount = pantryItems.filter((item: PantryItem) =>
+    item.expiryDate
+      ? isBefore(new Date(item.expiryDate), addDays(new Date(), 3))
+      : false
   ).length;
 
   const firstRecipe = recipes[0];

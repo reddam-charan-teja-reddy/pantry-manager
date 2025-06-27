@@ -40,8 +40,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Logo } from '../Logo';
 import { LogoIcon } from '../LogoIcon';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { logout } from '@/store/authSlice';
-import { RESET_STATE, persistor } from '@/store/store';
+import { logout } from '@/store/userInfoSlice';
+import { persistor } from '@/store/store';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -62,26 +62,35 @@ const AppLayout = ({
   const isMobile = useIsMobile();
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const user = useAppSelector((state) => state.auth.user);
-  const authLoading = useAppSelector((state) => state.auth.authLoading);
+  const { authState, authLoading, userDetails } = useAppSelector(
+    (state) => state.user
+  );
+
+  // Create a user object that matches the UserType interface
+  const user: UserType | null = authState
+    ? {
+        uid: userDetails.uid,
+        email: userDetails.email,
+        displayName: userDetails.name,
+        photoURL: userDetails.photoURL,
+      }
+    : null;
 
   const handleLogout = () => {
-    // First dispatch the logout action to clear user
+    // Dispatch the logout action to clear user
     dispatch(logout());
-    // Then dispatch the RESET_STATE action to clear the entire state
-    dispatch({ type: RESET_STATE });
-    // Also clear the persistor to ensure persisted state is cleared
+    // Clear the persistor to ensure persisted state is cleared
     persistor.purge();
-    router.push('/login');
+    router.push('/');
   };
 
   React.useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !authState) {
       router.push('/');
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, authState, router]);
 
-  if (authLoading || !user) {
+  if (authLoading || !authState) {
     return (
       <div className='flex h-screen items-center justify-center'>
         <LogoIcon className='h-12 w-12 animate-spin text-primary' />
@@ -166,10 +175,12 @@ const UserMenu = ({
           variant='ghost'
           className='relative h-10 w-auto justify-start gap-2 px-2'>
           <Avatar className='h-8 w-8'>
-            <AvatarImage
-              src={user?.photoURL || ''}
-              alt={user?.displayName || 'User'}
-            />
+            {user?.photoURL ? (
+              <AvatarImage
+                src={user.photoURL}
+                alt={user?.displayName || 'User'}
+              />
+            ) : null}
             <AvatarFallback>
               {user?.displayName?.charAt(0) || 'U'}
             </AvatarFallback>

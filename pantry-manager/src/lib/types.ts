@@ -2,10 +2,12 @@
 
 // User & Profile
 export interface User {
-  uid: string;
+  uid: string; // Primary ID used in the app
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
+  mongoId?: string; // MongoDB ObjectId (optional)
+  firebaseUid?: string; // Firebase UID (optional)
 }
 
 export interface UserProfile {
@@ -29,6 +31,20 @@ export interface PantryItem {
   expiryDate: string; // ISO 8601 string
   category: string;
   imageUrl?: string;
+  notes?: string;
+}
+
+// Database Pantry Item (matches MongoDB schema)
+export interface DbPantryItem {
+  _id?: string;
+  itemName: string;
+  quantity: number;
+  unit: string;
+  // MongoDB can return dates in various formats, especially when serialized/deserialized
+  expirationDate: Date | string | null;
+  category: string;
+  notes: string;
+  addedAt: Date | string;
 }
 
 // Recipes

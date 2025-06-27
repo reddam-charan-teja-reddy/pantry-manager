@@ -1,8 +1,8 @@
 'use client';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { loginSuccess } from '../../store/authSlice';
+import { useAppDispatch } from '@/store/hooks';
+import { loginSuccess } from '../../store/userInfoSlice';
 import {
   signInWithPopup,
   GoogleAuthProvider,
@@ -18,19 +18,19 @@ import { RootState } from '../../store/store';
 
 const Auth = () => {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { authState } = useSelector((state: RootState) => state.user);
 
   useEffect(() => {
-    if (user) {
+    if (authState) {
       router.replace('/dashboard');
     }
-  }, [user, router]);
+  }, [authState, router]);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -50,6 +50,7 @@ const Auth = () => {
           name: displayName,
           email,
           photoURL,
+          uid: user.uid, // Pass Firebase UID
         }),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -59,15 +60,16 @@ const Auth = () => {
         throw new Error(data.error || 'Failed to sign in');
       }
 
-      dispatch(
-        loginSuccess({
-          uid: data.user._id || user.uid,
-          displayName,
-          email,
-          photoURL,
-        })
-      );
+      const userData = {
+        uid: data.user._id || user.uid,
+        displayName: displayName || '',
+        email: email || '',
+        photoURL: photoURL || '',
+      };
+
+      dispatch(loginSuccess(userData));
       toast.success('Successfully signed in!');
+      handleAuthSuccess();
     } catch (error) {
       setError('Failed to sign in with Google');
       toast.error('Failed to sign in with Google');
@@ -84,14 +86,31 @@ const Auth = () => {
       const res = await signInWithEmailAndPassword(auth, email, password);
       const { user } = res;
       if (!user.email) throw new Error('Missing user details');
-      dispatch(
-        loginSuccess({
-          uid: user.uid,
-          displayName: user.displayName || null,
+      // Save user data to MongoDB
+      const response = await fetch('/api/userLogin', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: user.displayName,
           email: user.email,
-          photoURL: user.photoURL || null,
-        })
-      );
+          photoURL: user.photoURL,
+          uid: user.uid, // Pass Firebase UID
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sign in');
+      }
+
+      const userData = {
+        uid: data.user._id || user.uid, // Use MongoDB ID if available
+        displayName: user.displayName || '',
+        email: user.email || '',
+        photoURL: user.photoURL || '',
+      };
+
+      dispatch(loginSuccess(userData));
       toast.success('Successfully signed in!');
       handleAuthSuccess();
     } catch (err) {
