@@ -107,6 +107,67 @@ export const fetchPantryItems = createAsyncThunk(
   }
 );
 
+// Async thunk for updating a pantry item in the database
+export const updatePantryItemInDb = createAsyncThunk(
+  'pantry/updatePantryItemInDb',
+  async (
+    payload: { userId: string; item: PantryItem },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await fetch('/api/updatePantryItem', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: payload.userId,
+          item: payload.item,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return rejectWithValue(errorData.error || 'Failed to update item');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue('Failed to update item in pantry');
+    }
+  }
+);
+
+// Async thunk for removing a pantry item from the database
+export const removePantryItemInDb = createAsyncThunk(
+  'pantry/removePantryItemInDb',
+  async (payload: { userId: string; itemId: string }, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/api/removePantryItem', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: payload.userId,
+          itemId: payload.itemId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return rejectWithValue(errorData.error || 'Failed to remove item');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return rejectWithValue('Failed to remove item from pantry');
+    }
+  }
+);
+
 const pantrySlice = createSlice({
   name: 'pantry',
   initialState,
@@ -170,6 +231,37 @@ const pantrySlice = createSlice({
         state.items = items.map(convertDbToPantryItem);
       })
       .addCase(fetchPantryItems.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Add updatePantryItemInDb thunk
+      .addCase(updatePantryItemInDb.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updatePantryItemInDb.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedItem = action.payload.updatedItem;
+        const idx = state.items.findIndex((i) => i.id === updatedItem.id);
+        if (idx !== -1) state.items[idx] = updatedItem;
+      })
+      .addCase(updatePantryItemInDb.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // Add removePantryItemInDb thunk
+      .addCase(removePantryItemInDb.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(removePantryItemInDb.fulfilled, (state, action) => {
+        state.loading = false;
+        const removedId = action.payload.removedId;
+        state.items = state.items.filter((i) => i.id !== removedId);
+      })
+      .addCase(removePantryItemInDb.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

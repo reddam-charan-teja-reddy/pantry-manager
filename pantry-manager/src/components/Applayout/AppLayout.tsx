@@ -13,6 +13,7 @@ import {
   Bell,
   LogOut,
   ChevronDown,
+  List,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -37,6 +38,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
+import {
+  ToastProvider,
+  ToastViewport,
+  Toast,
+  ToastTitle,
+  ToastDescription,
+} from '@/components/ui/toast';
+import { ToastProps } from '@/hooks/use-toast';
 import { Logo } from '../Logo';
 import { LogoIcon } from '../LogoIcon';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
@@ -45,6 +54,7 @@ import { persistor } from '@/store/store';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/pantry', label: 'Pantry', icon: List },
   { href: '/add-items', label: 'Add Items', icon: PlusCircle },
   { href: '/recipes', label: 'Recipes', icon: BookOpen },
   { href: '/shopping-list', label: 'Shopping List', icon: ShoppingCart },
@@ -131,6 +141,11 @@ const AppLayout = ({
           <UserMenu user={user} onLogout={handleLogout} />
         </header>
         <main className='flex-1 p-4 pb-20 sm:p-6 sm:pb-6'>{children}</main>
+        {/* Toast Integration */}
+        <ToastProvider>
+          <ToastContainer />
+          <ToastViewport />
+        </ToastProvider>
         {isMobile && <BottomNav />}
       </SidebarInset>
     </SidebarProvider>
@@ -240,5 +255,36 @@ const BottomNav = () => {
     </div>
   );
 };
+
+// Component to render toasts when dispatched via CustomEvent
+function ToastContainer() {
+  const [toasts, setToasts] = React.useState<ToastProps[]>([]);
+  React.useEffect(() => {
+    const handler = (e: CustomEvent<ToastProps>) => {
+      setToasts((prev) => [...prev, e.detail]);
+    };
+    window.addEventListener('radix-toast', handler as EventListener);
+    return () =>
+      window.removeEventListener('radix-toast', handler as EventListener);
+  }, []);
+  return (
+    <>
+      {toasts.map((t, i) => (
+        <Toast
+          key={i}
+          open
+          onOpenChange={() =>
+            setToasts((prev) => prev.filter((_, idx) => idx !== i))
+          }
+          variant={t.variant || 'default'}>
+          <ToastTitle>{t.title}</ToastTitle>
+          {t.description && (
+            <ToastDescription>{t.description}</ToastDescription>
+          )}
+        </Toast>
+      ))}
+    </>
+  );
+}
 
 export default AppLayout;

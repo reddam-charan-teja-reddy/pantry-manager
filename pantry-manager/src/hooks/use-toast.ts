@@ -1,20 +1,13 @@
-import { useContext } from 'react';
-
-export interface Toast {
-  title?: string;
+// Simplified toast hook using CustomEvent for Radix UI toasts
+export interface ToastProps {
+  title: string;
   description?: string;
-  type?: 'default' | 'success' | 'error' | 'warning';
-  duration?: number;
+  variant?: 'default' | 'destructive';
 }
 
 export const useToast = () => {
-  // This is a simplified placeholder for your real toast implementation
-  const toast = (props: Toast) => {
-    console.log('Toast', props);
-    // In a real implementation, this would show a toast notification
+  const toast = (props: ToastProps) => {
+    window.dispatchEvent(new CustomEvent('radix-toast', { detail: props }));
   };
-
-  return {
-    toast,
-  };
+  return { toast };
 };
