@@ -261,6 +261,11 @@ function InputStep({
         </CardTitle>
       </CardHeader>
       <CardContent>{renderMethodContent()}</CardContent>
+      <CardContent className='flex justify-between'>
+        <Button variant='outline' onClick={onBack} disabled={isLoading}>
+          Back
+        </Button>
+      </CardContent>
     </Card>
   );
 }
