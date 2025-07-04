@@ -35,6 +35,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "src/hooks/storage.js"
-  ],
+, "next.config.js"  ],
   "exclude": ["node_modules"]
 }
