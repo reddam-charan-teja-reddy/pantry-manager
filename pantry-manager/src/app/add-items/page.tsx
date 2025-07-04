@@ -213,7 +213,11 @@ function InputStep({
     }
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/purchase/${text}`);
+      const res = await fetch('/api/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: text }),
+      });
       if (!res.ok) throw new Error();
       const data = await res.json();
       if (!data || !Array.isArray(data.items)) throw new Error();
@@ -262,7 +266,6 @@ function InputStep({
   };
 
   // Attach stream and begin scanning once video element is rendered
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (cameraActive && cameraStream && videoRef.current) {
       const videoElem = videoRef.current;
@@ -275,7 +278,7 @@ function InputStep({
         }
       });
     }
-  }, [cameraActive, cameraStream]);
+  }, [cameraActive, cameraStream, handleQrResult]);
 
   // Stop camera and reset scanner
   const stopCamera = () => {
