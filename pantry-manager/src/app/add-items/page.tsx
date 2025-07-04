@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import AppLayout from '@/components/Applayout/AppLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -49,6 +49,7 @@ import {
   addItemsToPantry,
   resetLoadingState,
 } from '@/store/pantrySlice';
+import { BrowserQRCodeReader } from '@zxing/library';
 
 export default function AddItemsPage() {
   const dispatch = useAppDispatch();
@@ -186,18 +187,123 @@ function InputStep({
   onBack: () => void;
 }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
 
+  // Mock detection for history import
   const handleDetect = () => {
     setIsLoading(true);
-    // This is where you would call your backend/AI to process the input
     setTimeout(() => {
       onItemsDetected(mockCandidateItems);
       setIsLoading(false);
     }, 1500);
   };
+  // Pass-through for manual add
+  const handleManualAdd = (item: PantryItem) => onItemsDetected([item]);
 
-  const handleManualAdd = (item: PantryItem) => {
-    onItemsDetected([item]);
+  // Process QR code result as purchase ID
+  const handleQrResult = async (text: string) => {
+    stopCamera();
+    if (!/^[0-9a-fA-F]{24}$/.test(text)) {
+      toast.error('Invalid QR code');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/purchase/${text}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (!data || !Array.isArray(data.items)) throw new Error();
+      // Map API items to PantryItem
+      const items: PantryItem[] = data.items.map(
+        (item: {
+          productId: string;
+          itemName: string;
+          quantity: number;
+          unit: string;
+          expirationDate: string | null;
+          category: string;
+        }) => ({
+          id: item.productId,
+          name: item.itemName,
+          quantity: item.quantity,
+          unit: item.unit === 'unit' ? 'units' : item.unit,
+          expiryDate: item.expirationDate
+            ? new Date(item.expirationDate).toISOString()
+            : '',
+          category: item.category,
+        })
+      );
+      onItemsDetected(items);
+    } catch {
+      toast.error('Invalid QR code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Start camera scanning using ZXing
+  const startCamera = async () => {
+    try {
+      setIsLoading(true);
+      // Request camera permission and obtain stream
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraStream(stream);
+      setCameraActive(true);
+    } catch (err) {
+      console.error(err);
+      toast.error('Camera access denied or error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Attach stream and begin scanning once video element is rendered
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (cameraActive && cameraStream && videoRef.current) {
+      const videoElem = videoRef.current;
+      videoElem.srcObject = cameraStream;
+      videoElem.play();
+      codeReaderRef.current = new BrowserQRCodeReader();
+      codeReaderRef.current.decodeFromVideoDevice(null, videoElem, (result) => {
+        if (result) {
+          handleQrResult(result.getText());
+        }
+      });
+    }
+  }, [cameraActive, cameraStream]);
+
+  // Stop camera and reset scanner
+  const stopCamera = () => {
+    if (codeReaderRef.current) codeReaderRef.current.reset();
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+      setCameraStream(null);
+    }
+    setCameraActive(false);
+  };
+
+  // Handle uploaded image QR scanning
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const readerInst = new BrowserQRCodeReader();
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const result = await readerInst.decodeFromImageElement(img);
+          handleQrResult(result.getText());
+        } catch {
+          toast.error('Invalid QR code in image');
+        }
+      };
+      img.onerror = () => toast.error('Invalid image file');
+      img.src = URL.createObjectURL(file);
+    }
   };
 
   const renderMethodContent = () => {
@@ -206,21 +312,43 @@ function InputStep({
         return (
           <div className='grid gap-4 text-center'>
             <p>Scan a receipt QR code or upload an image of it.</p>
-            <div className='flex justify-center gap-4'>
-              <Button size='lg' onClick={handleDetect} disabled={isLoading}>
-                <QrCode className='mr-2 h-5 w-5' /> Scan QR Code
-              </Button>
+            <div className='flex flex-col md:flex-row justify-center items-center gap-4'>
+              {!cameraActive ? (
+                <Button size='lg' onClick={startCamera} disabled={isLoading}>
+                  <QrCode className='mr-2 h-5 w-5' />
+                  {isLoading ? 'Loading...' : 'Scan QR Code'}
+                </Button>
+              ) : (
+                <div className='w-full max-w-md flex flex-col items-center'>
+                  <div className='relative w-full aspect-[4/3] bg-black rounded-lg overflow-hidden'>
+                    <video
+                      ref={videoRef}
+                      className='absolute inset-0 w-full h-full object-cover'
+                      muted
+                      autoPlay
+                      playsInline
+                    />
+                  </div>
+                  <Button size='sm' onClick={stopCamera} className='mt-2'>
+                    Stop Camera
+                  </Button>
+                </div>
+              )}
               <Button
                 size='lg'
                 variant='secondary'
-                onClick={handleDetect}
+                onClick={() => inputRef.current?.click()}
                 disabled={isLoading}>
                 <Upload className='mr-2 h-5 w-5' /> Upload Image
               </Button>
+              <input
+                type='file'
+                accept='image/*'
+                ref={inputRef}
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
             </div>
-            {isLoading && (
-              <Loader2 className='mx-auto mt-4 h-8 w-8 animate-spin' />
-            )}
           </div>
         );
       case 'history':
