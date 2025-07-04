@@ -43,6 +43,7 @@
     "recharts": "^3.0.2",
     "redux-persist": "^6.0.0",
     "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
     "zxing": "^0.1.2"
   },
   "devDependencies": {
