@@ -33,6 +33,17 @@ export default function Dashboard() {
   const recipes = useAppSelector((state) => state.recipes);
   const { authState, userDetails } = useAppSelector((state) => state.user);
 
+  // Handle first-time app load reload to prevent repeated API calls
+  useEffect(() => {
+    const hasReloaded = sessionStorage.getItem('dashboardReloaded');
+
+    if (!hasReloaded) {
+      sessionStorage.setItem('dashboardReloaded', 'true');
+      window.location.reload();
+      return;
+    }
+  }, []);
+
   // Load pantry items once when the dashboard mounts if user is available
   useEffect(() => {
     if (authState && userDetails.uid && pantryItems.length === 0 && !loading) {
