@@ -22,7 +22,6 @@ export async function GET(req: NextRequest) {
       // Try to find by MongoDB ObjectId first
       user = await User.findById(userId);
     } catch (error) {
-      // If that fails, try to find by email or other fields
       console.log(
         'Looking up user by alternative methods since ID lookup failed:',
         error instanceof Error ? error.message : 'Unknown error'
