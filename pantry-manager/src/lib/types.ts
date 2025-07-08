@@ -66,6 +66,11 @@ export interface ShoppingListItem {
   quantity: number;
   unit: 'units' | 'g' | 'kg' | 'ml' | 'l';
   purchased: boolean;
+  category?: string;
+  estimatedPrice?: number;
+  priority?: 'high' | 'medium' | 'low';
+  recipeId?: string;
+  recipeName?: string;
 }
 
 // Notifications

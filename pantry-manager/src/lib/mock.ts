@@ -70,10 +70,52 @@ export const mockRecipes: Recipe[] = [
 ];
 
 export const mockShoppingList: ShoppingListItem[] = [
-  { id: 's1', name: 'Lettuce', quantity: 1, unit: 'units', purchased: false },
-  { id: 's2', name: 'Mayonnaise', quantity: 1, unit: 'units', purchased: false },
-  { id: 's3', name: 'Cheese', quantity: 1, unit: 'units', purchased: true },
-  { id: 's4', name: 'Apples', quantity: 5, unit: 'units', purchased: false },
+  { 
+    id: 's1', 
+    name: 'Lettuce', 
+    quantity: 1, 
+    unit: 'units', 
+    purchased: false,
+    category: 'Recipe Ingredients',
+    estimatedPrice: 1.99,
+    priority: 'medium',
+    recipeId: 'r1',
+    recipeName: 'Simple Chicken Salad'
+  },
+  { 
+    id: 's2', 
+    name: 'Mayonnaise', 
+    quantity: 1, 
+    unit: 'units', 
+    purchased: false,
+    category: 'Recipe Ingredients',
+    estimatedPrice: 3.99,
+    priority: 'low',
+    recipeId: 'r1',
+    recipeName: 'Simple Chicken Salad'
+  },
+  { 
+    id: 's3', 
+    name: 'Cheese', 
+    quantity: 1, 
+    unit: 'units', 
+    purchased: true,
+    category: 'Recipe Ingredients',
+    estimatedPrice: 4.99,
+    priority: 'low',
+    recipeId: 'r2',
+    recipeName: 'Classic Omelette'
+  },
+  { 
+    id: 's4', 
+    name: 'Apples', 
+    quantity: 5, 
+    unit: 'units', 
+    purchased: false,
+    category: 'Custom',
+    estimatedPrice: 0.99,
+    priority: 'low'
+  },
 ];
 
 export const mockNotifications: Notification[] = [
