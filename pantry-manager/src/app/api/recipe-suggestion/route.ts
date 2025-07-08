@@ -9,6 +9,9 @@ const model = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
+console.log("Using API KEY:", process.env.GROQ_API_KEY);
+
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ recipes });
   } catch (err) {
     console.error('[ERROR]', err);
-    return NextResponse.json({ error: 'Failed to generate recipes' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to generate recipes',"key":process.env.GROQ_API_KEY }, { status: 500 });
   }
 }
 
