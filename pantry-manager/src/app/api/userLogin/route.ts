@@ -11,13 +11,22 @@ export async function POST(req: NextRequest) {
     let user = await User.findOne({ email });
 
     if (!user) {
-      // Create new user with Firebase UID stored
+      // Create new user with Firebase UID stored and default profile settings
       user = await User.create({
         name,
         email,
         photoURL,
         firebaseUid: uid, // Store the Firebase UID
-        pantry: [],
+        displayName: name, // Initialize displayName from name
+        region: '', // Empty default region
+        dietaryPreferences: [], // Empty dietary preferences
+        notificationSettings: {
+          expiryAlerts: true, // Default to true
+          weeklyReminders: false, // Default to false
+        },
+        categoryThresholds: {}, // Empty category thresholds
+        privacyConsent: false, // Default to false
+        pantry: [], // Empty pantry
       });
     } else {
       // Update the Firebase UID if it changed or wasn't set
@@ -34,7 +43,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ user });
+    // Always extract and include profile data in the response
+    const profileData = {
+      displayName: user.displayName || user.name || '',
+      region: user.region || '',
+      dietaryPreferences: user.dietaryPreferences || [],
+      notificationSettings: {
+        expiryAlerts: user.notificationSettings?.expiryAlerts ?? true,
+        weeklyReminders: user.notificationSettings?.weeklyReminders ?? false,
+      },
+      categoryThresholds: user.categoryThresholds || {},
+      privacyConsent: user.privacyConsent || false,
+    };
+
+    return NextResponse.json({
+      user,
+      profile: profileData,
+    });
   } catch (error) {
     console.error('Error creating user:', error);
     return NextResponse.json(
@@ -90,13 +115,32 @@ export async function GET(req: NextRequest) {
 
     // Include both MongoDB ID and Firebase UID in the response
     const userData = user.toObject ? user.toObject() : { ...user };
+
+    // Extract profile data
+    const profileData = {
+      displayName: userData.displayName || userData.name || '',
+      region: userData.region || '',
+      dietaryPreferences: userData.dietaryPreferences || [],
+      notificationSettings: {
+        expiryAlerts: userData.notificationSettings?.expiryAlerts ?? true,
+        weeklyReminders:
+          userData.notificationSettings?.weeklyReminders ?? false,
+      },
+      categoryThresholds: userData.categoryThresholds || {},
+      privacyConsent: userData.privacyConsent || false,
+    };
+
     const responseUser = {
       ...userData,
       _id: userData._id.toString(),
       mongoId: userData._id.toString(), // Explicit MongoDB ID
+      profile: profileData, // Include profile data
     };
 
-    return NextResponse.json({ user: responseUser });
+    return NextResponse.json({
+      user: responseUser,
+      profile: profileData, // Also return profile separately for easier access
+    });
   } catch (error) {
     console.error('Error fetching user:', error);
     return NextResponse.json(

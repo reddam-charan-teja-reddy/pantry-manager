@@ -1,4 +1,4 @@
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore, combineReducers, Action } from '@reduxjs/toolkit';
 import {
   persistStore,
   persistReducer,
@@ -32,7 +32,14 @@ const persistConfig = {
   ], // persist these reducers
 };
 
-const rootReducer = combineReducers({
+// Define a reset action
+export const RESET_STORE = 'RESET_STORE';
+
+export const resetStore = (): Action => ({
+  type: RESET_STORE,
+});
+
+const appReducer = combineReducers({
   user: userInfoSlice,
   pantry: pantryReducer,
   recipes: recipesReducer,
@@ -41,6 +48,19 @@ const rootReducer = combineReducers({
   profile: profileReducer,
   addItems: addItemsReducer,
 });
+
+// Root reducer with reset capability
+const rootReducer = (
+  state: ReturnType<typeof appReducer> | undefined,
+  action: Action
+) => {
+  // Reset all slices to initial state if the action is RESET_STORE
+  if (action.type === RESET_STORE) {
+    // Return undefined to let each reducer initialize with their default state
+    return appReducer(undefined, action);
+  }
+  return appReducer(state, action);
+};
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

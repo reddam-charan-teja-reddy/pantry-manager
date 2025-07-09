@@ -11,8 +11,11 @@ const profileSlice = createSlice({
     updateProfile: (state, action: PayloadAction<Partial<UserProfile>>) => {
       return { ...state, ...action.payload };
     },
+    resetProfile: () => {
+      return initialState;
+    },
   },
 });
 
-export const { updateProfile } = profileSlice.actions;
+export const { updateProfile, resetProfile } = profileSlice.actions;
 export default profileSlice.reducer;
