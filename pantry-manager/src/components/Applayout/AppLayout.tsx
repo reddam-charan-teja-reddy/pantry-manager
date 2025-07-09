@@ -87,6 +87,9 @@ const AppLayout = ({
     : null;
 
   const handleLogout = () => {
+    // Clear session storage data
+    sessionStorage.removeItem('pantryRecipes');
+
     // Dispatch the logout action to clear user
     dispatch(logout());
     // Clear the persistor to ensure persisted state is cleared

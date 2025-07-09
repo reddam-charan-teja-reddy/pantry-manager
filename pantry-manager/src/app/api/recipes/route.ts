@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const { userMessage, pantryItems } = body;
 
     // console.log("route",userMessage, pantryItems);
-    console.log("route",process.env.GROQ_API_KEY);
+    console.log('route', process.env.GROQ_API_KEY);
 
     if (!userMessage || !Array.isArray(pantryItems)) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
@@ -31,8 +31,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reply: response.text });
   } catch (error) {
-    console.error('Groq API error:', error,process.env.GROQ_API_KEY);
-    return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
+    console.error('Groq API error:', error, process.env.GROQ_API_KEY);
+    return NextResponse.json(
+      { error: 'Failed to generate response' },
+      { status: 500 }
+    );
   }
 }
 
