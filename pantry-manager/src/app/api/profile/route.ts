@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/hooks/db';
 import User from '@/models/users';
 
-// Connect to database
-dbConnect();
+// Connect to database - with error handling
+try {
+  dbConnect();
+  console.log('Database connection successful in profile route');
+} catch (error) {
+  console.error('Failed to connect to database:', error);
+}
 
 // GET handler to get user profile
 export async function GET(req: NextRequest) {
@@ -18,10 +23,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Find user by email or firebaseUid
-    const user =
-      (await User.findOne({ firebaseUid: userId })) ||
-      (await User.findOne({ email: userId }));
+    // Find user by firebaseUid
+    const user = await User.findOne({ firebaseUid: userId });
 
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -63,11 +66,8 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Find user by email or firebaseUid
-    const user =
-      (await User.findOne({ firebaseUid: userId })) ||
-      (await User.findOne({ email: userId }));
-
+    // Find user by firebaseUid
+    const user = await User.findOne({ firebaseUid: userId });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
@@ -112,6 +112,9 @@ export async function PUT(req: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating user profile:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message, error.stack);
+    }
     return NextResponse.json(
       { error: 'Failed to update user profile' },
       { status: 500 }

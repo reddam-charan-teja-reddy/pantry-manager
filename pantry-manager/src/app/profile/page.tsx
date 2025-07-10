@@ -123,21 +123,20 @@ export default function ProfilePage() {
 
   // Fetch profile data on initial load
   useEffect(() => {
-    // Only fetch if we haven't already loaded and we have user details
-    if (
-      !hasLoadedProfile &&
-      userDetails &&
-      (userDetails.email || userDetails.uid)
-    ) {
-      setIsLoading(true);
+    // Create an async function inside the effect
+    const fetchProfileData = async () => {
+      // Only fetch if we haven't already loaded and we have user's UID
+      if (!hasLoadedProfile && userDetails?.uid) {
+        setIsLoading(true);
 
-      // Get user ID from the user details
-      const userId = userDetails.email || userDetails.uid;
+        // Get user ID from the user details (using only UID for security)
+        const userId = userDetails.uid;
 
-      // Fetch profile data from API
-      fetch(`/api/profile?userId=${userId}`)
-        .then((response) => response.json())
-        .then((data) => {
+        // Fetch profile data from API using try-catch
+        try {
+          const response = await fetch(`/api/profile?userId=${userId}`);
+          const data = await response.json();
+
           if (data.success && data.profile) {
             // Update profile in Redux store
             dispatch(updateProfile(data.profile));
@@ -146,21 +145,24 @@ export default function ProfilePage() {
             sessionStorage.setItem('profileLoaded', 'true');
             setHasLoadedProfile(true);
 
+            // Log the profile data retrieved from database for debugging
             console.log('Profile loaded from DB:', data.profile);
           }
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error('Error fetching profile:', error);
           toast({
             title: 'Error',
             description: 'Failed to load profile data',
             variant: 'destructive',
           });
-        })
-        .finally(() => {
+        } finally {
           setIsLoading(false);
-        });
-    }
+        }
+      }
+    };
+
+    // Call the async function
+    fetchProfileData();
   }, [dispatch, hasLoadedProfile, userDetails, toast]);
 
   // Keep form in sync with store if profile changes
@@ -188,7 +190,7 @@ export default function ProfilePage() {
     });
   }, [profile, userName, reset]);
 
-  const onSubmit = (data: ProfileFormValues) => {
+  const onSubmit = async (data: ProfileFormValues) => {
     // Custom validation before submitting
     const validationErrors = validateProfile(data);
 
@@ -208,8 +210,8 @@ export default function ProfilePage() {
 
     setIsSaving(true);
 
-    // Get user ID from the state
-    const userId = userDetails.email || userDetails.uid;
+    // Get user ID from the state (using only UID for security)
+    const userId = userDetails.uid;
 
     // Prepare profile data for API
     const finalRegion =
@@ -231,48 +233,64 @@ export default function ProfilePage() {
     // Update profile in Redux store
     dispatch(updateProfile(profileData));
 
-    // Save to database via API
-    fetch('/api/profile', {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        userId,
-        profileData,
-      }),
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (data.success) {
-          // Mark profile as loaded in session storage
-          sessionStorage.setItem('profileLoaded', 'true');
-          setHasLoadedProfile(true);
+    // Log the profile data being sent to the API for debugging
+    console.log('Sending profile data to API:', { userId, profileData });
 
-          toast({
-            title: 'Profile Updated',
-            description: 'Your settings have been saved to the database.',
-          });
-        } else {
-          toast({
-            title: 'Warning',
-            description:
-              'Profile updated locally but failed to save to the database.',
-            variant: 'destructive',
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Error saving profile:', error);
+    // Save to database via API using try-catch for consistency
+    try {
+      const response = await fetch('/api/profile-update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          profileData,
+        }),
+      });
+      // Log HTTP status code to monitor API response
+      console.log('Profile update response status:', response.status);
+      const data = await response.json();
+      // Log response data from API for debugging
+      console.log('Profile update response data:', data);
+
+      if (data.success) {
+        // Mark profile as loaded in session storage
+        sessionStorage.setItem('profileLoaded', 'true');
+        setHasLoadedProfile(true);
+
         toast({
-          title: 'Error',
-          description: 'Failed to save profile settings to the database.',
+          title: 'Profile Updated',
+          description: 'Your settings have been saved to the database.',
+        });
+      } else {
+        toast({
+          title: 'Warning',
+          description:
+            'Profile updated locally but failed to save to the database.',
           variant: 'destructive',
         });
-      })
-      .finally(() => {
-        setIsSaving(false);
+      }
+    } catch (error) {
+      // Log basic error information for debugging
+      console.error('Error saving profile:', error);
+      // More detailed error logging with type-safe access to error properties
+      if (error instanceof Error) {
+        console.error(
+          'Error name:',
+          error.name,
+          'Error message:',
+          error.message
+        );
+      }
+      toast({
+        title: 'Error',
+        description: 'Failed to save profile settings to the database.',
+        variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
