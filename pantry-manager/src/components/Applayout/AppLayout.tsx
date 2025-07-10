@@ -88,6 +88,9 @@ const AppLayout = ({
     : null;
 
   const handleLogout = () => {
+    // Clear session storage data
+    sessionStorage.removeItem('pantryRecipes');
+
     // Clear all session storage related to profile
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('profileLoaded');

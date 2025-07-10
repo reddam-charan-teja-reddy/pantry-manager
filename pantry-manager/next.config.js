@@ -1,5 +1,11 @@
 const nextConfig = {
   images: {
+    domains: [
+      'images.unsplash.com',
+      'images.pexels.com',
+      'placehold.co',
+      'picsum.photos',
+    ],
     remotePatterns: [
       {
         protocol: 'https',

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@heroui/react": "^2.7.11",
+    "@langchain/core": "^0.3.62",
+    "@langchain/groq": "^0.2.3",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.5",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -37,6 +39,7 @@
     "date-fns": "^4.1.0",
     "firebase": "^11.10.0",
     "js-cookie": "^3.0.5",
+    "langchain": "^0.3.29",
     "lucide-react": "^0.523.0",
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.0",
