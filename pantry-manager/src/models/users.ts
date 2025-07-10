@@ -6,6 +6,15 @@ const userSchema = new Schema(
     email: String,
     photoURL: String,
     firebaseUid: String, // Store the Firebase UID for easier lookup
+    displayName: { type: String, default: '' },
+    region: { type: String, default: '' },
+    dietaryPreferences: { type: [String], default: [] },
+    notificationSettings: {
+      expiryAlerts: { type: Boolean, default: true },
+      weeklyReminders: { type: Boolean, default: true },
+    },
+    categoryThresholds: { type: Map, of: Number, default: {} },
+    privacyConsent: { type: Boolean, default: false },
     pantry: [
       {
         itemName: { type: String, required: true },

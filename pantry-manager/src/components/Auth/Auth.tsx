@@ -3,6 +3,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch } from '@/store/hooks';
 import { loginSuccess } from '../../store/userInfoSlice';
+import { updateProfile } from '../../store/profileSlice';
 import {
   signInWithPopup,
   GoogleAuthProvider,
@@ -67,7 +68,19 @@ const Auth = () => {
         photoURL: photoURL || '',
       };
 
+      // Update user info in Redux
       dispatch(loginSuccess(userData));
+
+      // Always fetch the profile data from the API response
+      if (data.profile) {
+        dispatch(updateProfile(data.profile));
+
+        // Mark profile as loaded in sessionStorage
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('profileLoaded', 'true');
+        }
+      }
+
       toast.success('Successfully signed in!');
       handleAuthSuccess();
     } catch (error) {
@@ -86,6 +99,7 @@ const Auth = () => {
       const res = await signInWithEmailAndPassword(auth, email, password);
       const { user } = res;
       if (!user.email) throw new Error('Missing user details');
+
       // Save user data to MongoDB
       const response = await fetch('/api/userLogin', {
         method: 'POST',
@@ -110,7 +124,19 @@ const Auth = () => {
         photoURL: user.photoURL || '',
       };
 
+      // Update user info in Redux
       dispatch(loginSuccess(userData));
+
+      // Always fetch the profile data from the API response
+      if (data.profile) {
+        dispatch(updateProfile(data.profile));
+
+        // Mark profile as loaded in sessionStorage
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('profileLoaded', 'true');
+        }
+      }
+
       toast.success('Successfully signed in!');
       handleAuthSuccess();
     } catch (err) {

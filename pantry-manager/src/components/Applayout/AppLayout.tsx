@@ -50,7 +50,8 @@ import { Logo } from '../Logo';
 import { LogoIcon } from '../LogoIcon';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logout } from '@/store/userInfoSlice';
-import { persistor } from '@/store/store';
+import { resetProfile } from '@/store/profileSlice';
+import { persistor, resetStore } from '@/store/store';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -90,11 +91,23 @@ const AppLayout = ({
     // Clear session storage data
     sessionStorage.removeItem('pantryRecipes');
 
-    // Dispatch the logout action to clear user
+    // Clear all session storage related to profile
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('profileLoaded');
+      // Clear any other session storage items if needed
+    }
+
+    // First dispatch logout to clear auth state
     dispatch(logout());
-    // Clear the persistor to ensure persisted state is cleared
-    persistor.purge();
-    router.push('/');
+
+    // Then dispatch resetStore to reset all slices to their initial state
+    dispatch(resetStore());
+
+    // Also clear persisted state to be safe
+    persistor.purge().then(() => {
+      // Navigate to homepage after state is cleared
+      router.push('/');
+    });
   };
 
   React.useEffect(() => {
