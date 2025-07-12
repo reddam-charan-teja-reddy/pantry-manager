@@ -5,6 +5,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from '@/store/store';
 import { Toaster } from 'react-hot-toast';
 import { HeroUIProvider } from '@heroui/react';
+import { Analytics } from '@vercel/analytics/next';
 
 // Loading component shown during persistence rehydration
 const PersistenceLoading = () => (
@@ -21,6 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <PersistGate loading={<PersistenceLoading />} persistor={persistor}>
         <HeroUIProvider>
           {children}
+          <Analytics />
           <Toaster position='top-center' />
         </HeroUIProvider>
       </PersistGate>
