@@ -133,10 +133,21 @@ export default function ProfilePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: userDetails.uid }),
         });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Error response from profile API:', errorText);
+          throw new Error(
+            `Failed to fetch profile: ${response.status} ${response.statusText}`
+          );
+        }
+
         const data = await response.json();
         if (data.success && data.profile) {
           dispatch(updateProfile(data.profile));
           console.log('Profile loaded from DB:', data.profile);
+        } else {
+          console.warn('Profile response missing expected data:', data);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);

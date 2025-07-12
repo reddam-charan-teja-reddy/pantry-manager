@@ -534,16 +534,34 @@ export default function PantryPage() {
         description='Are you sure you want to remove all expired items?'
         confirmLabel='Clear'
         cancelLabel='Cancel'
-        onConfirm={() => {
-          expiringItems.forEach((item) => {
-            dispatch(
-              removePantryItemInDb({ userId: userDetails.uid, itemId: item.id })
-            )
-              .unwrap()
-              .catch(() => {});
-          });
-          toast({ title: 'Expired items cleared', variant: 'default' });
-          setConfirmClearExpired(false);
+        onConfirm={async () => {
+          try {
+            const deletePromises = expiredItems.map((item) =>
+              dispatch(
+                removePantryItemInDb({
+                  userId: userDetails.uid,
+                  itemId: item.id,
+                })
+              ).unwrap()
+            );
+
+            // Wait for all delete operations to complete
+            await Promise.all(deletePromises);
+
+            // Only show success message when all operations have completed
+            toast({ title: 'Expired items cleared', variant: 'default' });
+
+            // Re-fetch pantry items to ensure UI is in sync
+            dispatch(fetchPantryItems(userDetails.uid));
+          } catch (error) {
+            toast({
+              title: 'Failed to clear some items',
+              description: 'Some expired items could not be removed.',
+              variant: 'destructive',
+            });
+          } finally {
+            setConfirmClearExpired(false);
+          }
         }}
         onCancel={() => setConfirmClearExpired(false)}
       />

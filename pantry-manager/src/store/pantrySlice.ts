@@ -97,18 +97,28 @@ export const fetchPantryItems = createAsyncThunk(
         },
         body: JSON.stringify({ userId }),
       });
+
       if (!response.ok) {
-        const errorData = await response.json();
-        return rejectWithValue(
-          errorData.error || 'Failed to fetch pantry items'
-        );
+        const errorText = await response.text();
+        let errorMessage = `Failed to fetch pantry items. Status: ${response.status}`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.error || errorMessage;
+        } catch (parseError) {
+          console.error('Error parsing error response:', parseError);
+          errorMessage += ` Response: ${errorText}`;
+        }
+        return rejectWithValue(errorMessage);
       }
 
       const data = await response.json();
       console.log('Pantry items fetched successfully:', data);
       return data; // Return the full data object to handle in the reducer
     } catch (error) {
-      return rejectWithValue('Failed to fetch pantry items');
+      console.error('Error in fetchPantryItems thunk:', error);
+      return rejectWithValue(
+        error instanceof Error ? error.message : 'Failed to fetch pantry items'
+      );
     }
   }
 );

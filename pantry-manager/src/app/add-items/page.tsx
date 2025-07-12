@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/Applayout/AppLayout';
 import { Button } from '@/components/ui/button';
 import {
@@ -204,50 +204,73 @@ function InputStep({
   // Pass-through for manual add
   const handleManualAdd = (item: PantryItem) => onItemsDetected([item]);
 
+  // Stop camera and reset scanner
+  const stopCamera = useCallback(() => {
+    if (codeReaderRef.current) codeReaderRef.current.reset();
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+      setCameraStream(null);
+    }
+    setCameraActive(false);
+  }, [cameraStream]);
+
   // Process QR code result as purchase ID
-  const handleQrResult = async (text: string) => {
-    stopCamera();
-    if (!/^[0-9a-fA-F]{24}$/.test(text)) {
-      toast.error('Invalid QR code');
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/purchase', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: text }),
-      });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (!data || !Array.isArray(data.items)) throw new Error();
-      // Map API items to PantryItem
-      const items: PantryItem[] = data.items.map(
-        (item: {
-          productId: string;
-          itemName: string;
-          quantity: number;
-          unit: string;
-          expirationDate: string | null;
-          category: string;
-        }) => ({
-          id: item.productId,
-          name: item.itemName,
-          quantity: item.quantity,
-          unit: item.unit === 'unit' ? 'units' : item.unit,
-          expiryDate: item.expirationDate
-            ? new Date(item.expirationDate).toISOString()
-            : '',
-          category: item.category,
-        })
-      );
-      onItemsDetected(items);
-    } catch {
-      toast.error('Invalid QR code');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleQrResult = useCallback(
+    async (text: string) => {
+      stopCamera();
+      if (!/^[0-9a-fA-F]{24}$/.test(text)) {
+        toast.error('Invalid QR code');
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const res = await fetch('/api/purchase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: text }),
+        });
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        if (!data || !Array.isArray(data.items)) throw new Error();
+        // Map API items to PantryItem
+        const items: PantryItem[] = data.items.map(
+          (item: {
+            productId: string;
+            itemName: string;
+            quantity: number;
+            unit: string;
+            expirationDate: string | null;
+            category: string;
+          }) => {
+            // Set default expiry date to 1 year from today if not provided
+            let expiryDate = '';
+            if (item.expirationDate) {
+              expiryDate = new Date(item.expirationDate).toISOString();
+            } else {
+              const defaultDate = new Date();
+              defaultDate.setFullYear(defaultDate.getFullYear() + 1);
+              expiryDate = defaultDate.toISOString();
+            }
+
+            return {
+              id: item.productId,
+              name: item.itemName,
+              quantity: item.quantity,
+              unit: item.unit === 'unit' ? 'units' : item.unit,
+              expiryDate,
+              category: item.category,
+            };
+          }
+        );
+        onItemsDetected(items);
+      } catch {
+        toast.error('Invalid QR code');
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [stopCamera, setIsLoading, onItemsDetected]
+  );
 
   // Start camera scanning using ZXing
   const startCamera = async () => {
@@ -279,16 +302,6 @@ function InputStep({
       });
     }
   }, [cameraActive, cameraStream, handleQrResult]);
-
-  // Stop camera and reset scanner
-  const stopCamera = () => {
-    if (codeReaderRef.current) codeReaderRef.current.reset();
-    if (cameraStream) {
-      cameraStream.getTracks().forEach((t) => t.stop());
-      setCameraStream(null);
-    }
-    setCameraActive(false);
-  };
 
   // Handle uploaded image QR scanning
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -412,6 +425,13 @@ function ManualAddForm({
   const [unit, setUnit] = useState<'units' | 'g' | 'kg' | 'ml' | 'l'>('units');
   const [notes, setNotes] = useState('');
 
+  // Set a default expiry date of 1 year from now
+  const defaultExpiryDate = new Date();
+  defaultExpiryDate.setFullYear(defaultExpiryDate.getFullYear() + 1);
+  const [expiryDate, setExpiryDate] = useState(
+    defaultExpiryDate.toISOString().split('T')[0]
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const newItem: PantryItem = {
@@ -419,7 +439,9 @@ function ManualAddForm({
       name,
       quantity,
       unit,
-      expiryDate: new Date().toISOString(),
+      expiryDate: expiryDate
+        ? new Date(expiryDate).toISOString()
+        : defaultExpiryDate.toISOString(),
       category,
       notes,
     };
@@ -494,6 +516,16 @@ function ManualAddForm({
       </div>
 
       <div className='grid gap-2'>
+        <Label htmlFor='expiryDate'>Expiry Date</Label>
+        <Input
+          id='expiryDate'
+          type='date'
+          value={expiryDate}
+          onChange={(e) => setExpiryDate(e.target.value)}
+        />
+      </div>
+
+      <div className='grid gap-2'>
         <Label htmlFor='notes'>Notes</Label>
         <Input
           id='notes'
@@ -528,6 +560,19 @@ function ValidationStep({
   addItem: () => void;
 }) {
   const { loading } = useAppSelector((state) => state.pantry);
+
+  // Function to handle empty expiry dates by setting to 1 year from now
+  const handleExpiryDateChange = (id: string, value: string) => {
+    if (!value) {
+      // Set default to 1 year from today if empty
+      const defaultDate = new Date();
+      defaultDate.setFullYear(defaultDate.getFullYear() + 1);
+      updateItem(id, 'expiryDate', defaultDate.toISOString());
+    } else {
+      updateItem(id, 'expiryDate', new Date(value).toISOString());
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -579,11 +624,7 @@ function ValidationStep({
                 type='date'
                 value={item.expiryDate ? item.expiryDate.split('T')[0] : ''}
                 onChange={(e) =>
-                  updateItem(
-                    item.id,
-                    'expiryDate',
-                    new Date(e.target.value).toISOString()
-                  )
+                  handleExpiryDateChange(item.id, e.target.value)
                 }
               />
             </div>

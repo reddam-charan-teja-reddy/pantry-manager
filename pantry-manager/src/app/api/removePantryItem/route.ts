@@ -14,33 +14,37 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Find user by ID or alternate fields
-    let user;
+    // Find user by ID or alternate fields to check if user exists
+    let query;
     try {
-      user = await User.findById(userId);
+      // First try to find by MongoDB _id
+      if (await User.findById(userId)) {
+        query = { _id: userId };
+      } else {
+        // Otherwise try firebaseUid or email
+        query = { $or: [{ firebaseUid: userId }, { email: userId }] };
+      }
     } catch {
-      user =
-        (await User.findOne({ firebaseUid: userId })) ||
-        (await User.findOne({ email: userId }));
+      // If error in parsing ObjectId, use alternative fields
+      query = { $or: [{ firebaseUid: userId }, { email: userId }] };
     }
-    if (!user) {
+
+    // Use MongoDB's atomic $pull operation to remove the item in a single operation
+    const result = await User.updateOne(query, {
+      $pull: { pantry: { _id: itemId } },
+    });
+
+    if (result.matchedCount === 0) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Remove matching pantry item
-    const originalCount = user.pantry.length;
-    user.pantry = user.pantry.filter(
-      (pi: DbPantryItem) => pi._id?.toString() !== itemId
-    );
-    if (user.pantry.length === originalCount) {
+    if (result.modifiedCount === 0) {
       return NextResponse.json(
-        { error: 'Pantry item not found' },
+        { error: 'Pantry item not found or already removed' },
         { status: 404 }
       );
     }
 
-    // Save user
-    await user.save();
     return NextResponse.json({ success: true, removedId: itemId });
   } catch (error) {
     console.error('Error removing pantry item:', error);

@@ -3,62 +3,62 @@ import User from '@/models/users';
 import { NextRequest, NextResponse } from 'next/server';
 import { DbPantryItem } from '@/lib/types';
 
-export async function POST(req: NextRequest) {
+// Common logic for fetching pantry items by userId
+async function fetchItemsByUserId(userId: string | null) {
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  }
+  let user;
   try {
-    await connectDb();
-    const { userId } = await req.json();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
-    let user;
-
-    try {
-      // Try to find by MongoDB ObjectId first
-      user = await User.findById(userId);
-    } catch (error) {
-      console.log(
-        'Looking up user by alternative methods since ID lookup failed:',
-        error instanceof Error ? error.message : 'Unknown error'
-      );
-      user = await User.findOne({ email: userId });
-
-      // If that doesn't work either, try looking up by a field that might store the UID
-      if (!user) {
-        user = await User.findOne({ firebaseUid: userId });
-      }
-    }
-
-    if (!user) {
-      return NextResponse.json(
-        {
-          error: 'User not found',
-          message: `No user found with identifier: ${userId}`,
-        },
-        { status: 404 }
-      );
-    }
-
-    // Prepare the pantry items for the frontend
-    const pantryItems = user.pantry || [];
-
-    // Just return the pantry items directly
-    // Let the frontend handle the conversion in the convertDbToPantryItem function
-    const serializedItems = JSON.parse(JSON.stringify(pantryItems));
-
-    return NextResponse.json({
-      success: true,
-      pantryItems: serializedItems,
-    });
-  } catch (error) {
-    console.error('Error fetching pantry items:', error);
+    user = await User.findById(userId);
+  } catch {
+    user =
+      (await User.findOne({ email: userId })) ||
+      (await User.findOne({ firebaseUid: userId }));
+  }
+  if (!user) {
     return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
+      {
+        error: 'User not found',
+        message: `No user found with identifier: ${userId}`,
+      },
+      { status: 404 }
     );
   }
+  const pantryItems = user.pantry || [];
+  const serializedItems = JSON.parse(JSON.stringify(pantryItems));
+  return NextResponse.json({ success: true, pantryItems: serializedItems });
+}
+
+// Handle GET (fallback to URL searchParams)
+export async function GET(req: NextRequest) {
+  await connectDb();
+  const searchParams = req.nextUrl.searchParams;
+  const userId = searchParams.get('userId');
+
+  return fetchItemsByUserId(userId);
+}
+
+// Handle POST (expect JSON body but fallback on parse failure)
+export async function POST(req: NextRequest) {
+  await connectDb();
+  let userId: string | null = null;
+  try {
+    // Check content type and parse JSON body if applicable
+    const contentType = req.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const body = await req.json();
+      userId = body.userId || null;
+    }
+  } catch {
+    // ignore JSON parse errors
+  }
+
+  // If userId is not found in body, try query params (fallback)
+  if (!userId) {
+    const searchParams = req.nextUrl.searchParams;
+    userId = searchParams.get('userId');
+  }
+
+  return fetchItemsByUserId(userId);
 }
