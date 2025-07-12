@@ -20,9 +20,20 @@ export async function POST(req: NextRequest) {
       new SystemMessage(
         `You're a recipe generator. Suggest 3 creative recipes using: ${pantryItems.join(
           ', '
-        )}. Return as JSON array with id, title, description, imageUrl:(use 'https://picsum.photos/600/400' with different seed numbers like '?random=1', '?random=2', etc. for reliable placeholder food images), ingredients, inPantry: list of ingredients that are in the pantry, missing: list of ingredients
-         that are missing in the pantry, and estimatedTime strictly follow the 
-         the return format do not add any extra text just return the response in the said format i only need the json.`
+        )}. Return ONLY a JSON array of recipe objects in this exact format (no additional text):
+[
+  {
+    "id": "string",
+    "title": "string",
+    "description": "string",
+    "imageUrl": "string",
+    "ingredients": ["string"],
+    "inPantry": ["string"],
+    "missing": ["string"],
+    "estimatedTime": "string"
+  }
+]
+Use 'https://picsum.photos/600/400?random=1' (and ?random=2, etc.) for placeholder images.`
       ),
       new HumanMessage('Generate the recipes.'),
     ]);
@@ -30,12 +41,27 @@ export async function POST(req: NextRequest) {
     const rawText = response.text.trim();
     const jsonText = rawText.replace(/```json|```/g, '').trim();
 
-    const recipes = JSON.parse(jsonText);
+    let recipes;
+    try {
+      recipes = JSON.parse(jsonText);
+    } catch (parseErr) {
+      console.error(
+        '[ERROR] JSON parse failed in recipe-suggestion:',
+        parseErr,
+        'raw:',
+        rawText
+      );
+      return NextResponse.json(
+        { error: 'Invalid JSON format from model', raw: rawText },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ recipes });
   } catch (err) {
-    console.error('[ERROR]', err);
+    console.error('[ERROR] Recipe suggestion failed:', err);
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: 'Failed to generate recipes', key: process.env.GROQ_API_KEY },
+      { error: 'Failed to generate recipes', details: message },
       { status: 500 }
     );
   }

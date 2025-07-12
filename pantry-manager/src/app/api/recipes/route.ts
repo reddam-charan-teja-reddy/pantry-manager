@@ -20,9 +20,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
     }
 
-    const systemPrompt = `You are a helpful recipe assistant and normal conversational chatbot. chat with the user politely and friendly and based on user messages decide whether to suggest recipes or char normally. The user has the following pantry items: ${pantryItems.join(
+    const systemPrompt = `You are a helpful recipe assistant
+     and normal conversational chatbot. chat with the user 
+     politely and friendly and based on user messages decide
+      whether to suggest recipes or char normally. The user 
+      has the following pantry items: ${pantryItems.join(
       ', '
-    )}. Suggest recipe ideas, meal plans, or ingredient substitutes as requested. Be creative but practical. Also don't generate huge messages keep it simple and short`;
+    )}. Suggest recipe ideas, meal plans, or ingredient
+     substitutes as requested. Be creative but practical. 
+     Also don't generate huge messages keep it simple and short`;
 
     const response = await model.call([
       new SystemMessage(systemPrompt),

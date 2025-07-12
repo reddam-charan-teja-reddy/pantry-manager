@@ -109,6 +109,11 @@ export default function RecipesPage() {
           }),
         });
         const data = await res.json();
+        if (!res.ok) {
+          // API returned an error payload
+          toast.error(data.error || 'Failed to generate recipe suggestions');
+          return;
+        }
         console.log(data.recipes);
         setSuggestedRecipes(data.recipes);
         dispatch(setRecipes(data.recipes));
