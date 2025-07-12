@@ -129,14 +129,19 @@ export default function PantryPage() {
       .includes(searchTerm.toLowerCase());
     const matchesCategory =
       filterCategory === 'all' || item.category === filterCategory;
-    const isExpiring = isBefore(new Date(item.expiryDate), expiringThreshold);
-    if (showExpiringOnly && !isExpiring) return false;
+    const itemDate = new Date(item.expiryDate);
+    if (showExpiringOnly && !isBefore(itemDate, expiringThreshold))
+      return false;
     return matchesSearch && matchesCategory;
   });
-  // Split into expiring soon and others
-  const expiringItems = displayedItems.filter((item) =>
-    isBefore(new Date(item.expiryDate), expiringThreshold)
+  // Split into expired, expiring soon and others
+  const expiredItems = displayedItems.filter((item) =>
+    isBefore(new Date(item.expiryDate), now)
   );
+  const expiringItems = displayedItems.filter((item) => {
+    const date = new Date(item.expiryDate);
+    return !isBefore(date, now) && isBefore(date, expiringThreshold);
+  });
   const otherItems = displayedItems.filter(
     (item) => !isBefore(new Date(item.expiryDate), expiringThreshold)
   );
@@ -180,6 +185,123 @@ export default function PantryPage() {
         </Button>
       </div>
 
+      {/* Expired Items Section */}
+      {expiredItems.length > 0 && (
+        <>
+          <h2 className='text-lg font-semibold mb-2 text-red-600'>
+            Expired Items
+          </h2>
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-6'>
+            {expiredItems.map((item) => (
+              <Card
+                key={item.id}
+                className='flex flex-col justify-between h-full p-4 border border-red-500 bg-red-50'>
+                <CardHeader>
+                  <CardTitle>{item.name}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Image
+                    src={item.imageUrl || '/sample_img.avif'}
+                    alt={item.name}
+                    width={150}
+                    height={150}
+                    className='rounded-md object-cover'
+                  />
+                  <p className='mt-2'>
+                    {item.quantity} {item.unit}
+                  </p>
+                  <p className='text-sm text-muted-foreground'>
+                    Expires: {item.expiryDate.split('T')[0]}
+                  </p>
+                </CardContent>
+                <CardFooter className='flex items-center justify-between space-x-4 p-4'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='p-2'
+                    onClick={() => handleReduce(item)}>
+                    <MinusCircle className='h-4 w-6' />
+                  </Button>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='p-2'
+                    onClick={() => handleIncrease(item)}>
+                    <PlusCircle className='h-4 w-6' />
+                  </Button>
+                  <Dialog
+                    open={!!editingItem && editingItem.id === item.id}
+                    onOpenChange={(open) => {
+                      if (!open) setEditingItem(null);
+                    }}>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        className='p-2'
+                        onClick={() => openEdit(item)}>
+                        <Edit className='h-4 w-6' />
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Edit Item</DialogTitle>
+                      </DialogHeader>
+                      <div className='space-y-4'>
+                        <div>
+                          <Label>Name</Label>
+                          <Input
+                            name='name'
+                            value={formData.name}
+                            onChange={handleFormChange}
+                          />
+                        </div>
+                        <div>
+                          <Label>Quantity</Label>
+                          <Input
+                            name='quantity'
+                            type='number'
+                            value={formData.quantity}
+                            onChange={handleFormChange}
+                          />
+                        </div>
+                        <div>
+                          <Label>Expiry Date</Label>
+                          <Input
+                            name='expiryDate'
+                            type='date'
+                            value={formData.expiryDate}
+                            onChange={handleFormChange}
+                          />
+                        </div>
+                        <div>
+                          <Label>Notes</Label>
+                          <Input
+                            name='notes'
+                            value={formData.notes}
+                            onChange={handleFormChange}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleUpdate}>Update</Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Button
+                    variant='destructive'
+                    size='sm'
+                    className='p-2'
+                    onClick={() => handleClear(item)}>
+                    <Trash2 className='h-4 w-6' />
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Expiring Soon Section */}
       {expiringItems.length > 0 && !showExpiringOnly && (
         <h2 className='text-lg font-semibold mb-2'>Expiring Soon</h2>
@@ -187,7 +309,9 @@ export default function PantryPage() {
       {expiringItems.length > 0 && (
         <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-6'>
           {expiringItems.map((item) => (
-            <Card key={item.id} className='p-4'>
+            <Card
+              key={item.id}
+              className='flex flex-col justify-between h-full p-4'>
               <CardHeader>
                 <CardTitle>{item.name}</CardTitle>
               </CardHeader>
@@ -296,7 +420,9 @@ export default function PantryPage() {
       <h2 className='text-lg font-semibold mb-2'>All Items</h2>
       <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-8'>
         {otherItems.map((item) => (
-          <Card key={item.id} className='p-4'>
+          <Card
+            key={item.id}
+            className='flex flex-col justify-between h-full p-4'>
             <CardHeader>
               <CardTitle>{item.name}</CardTitle>
             </CardHeader>
