@@ -2,16 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/hooks/db';
 import User from '@/models/users';
 
-// Connect to database - with error handling
-try {
-  dbConnect();
-  console.log('Database connection successful in profile route');
-} catch (error) {
-  console.error('Failed to connect to database:', error);
-}
-
 // GET handler to get user profile
 export async function GET(req: NextRequest) {
+  // Ensure database connection is established per request
+  await dbConnect();
+  console.log('Database connection established for GET /api/profile');
   try {
     const searchParams = req.nextUrl.searchParams;
     const userId = searchParams.get('userId');
@@ -31,6 +26,17 @@ export async function GET(req: NextRequest) {
     }
 
     // Return profile data
+    // Convert Mongoose Map for categoryThresholds to plain object
+    const thresholds: Record<string, number> = {};
+    if (
+      user.categoryThresholds &&
+      typeof user.categoryThresholds.forEach === 'function'
+    ) {
+      // Mongoose Map supports forEach
+      user.categoryThresholds.forEach((value: number, key: string) => {
+        thresholds[key] = value;
+      });
+    }
     return NextResponse.json({
       success: true,
       profile: {
@@ -38,10 +44,10 @@ export async function GET(req: NextRequest) {
         region: user.region || '',
         dietaryPreferences: user.dietaryPreferences || [],
         notificationSettings: {
-          expiryAlerts: user.notificationSettings?.expiryAlerts || true,
-          weeklyReminders: user.notificationSettings?.weeklyReminders || false,
+          expiryAlerts: user.notificationSettings?.expiryAlerts ?? true,
+          weeklyReminders: user.notificationSettings?.weeklyReminders ?? false,
         },
-        categoryThresholds: user.categoryThresholds || {},
+        categoryThresholds: thresholds,
         privacyConsent: user.privacyConsent || false,
       },
     });

@@ -121,49 +121,35 @@ export default function ProfilePage() {
   // Watch the region value to see if "Other" is selected
   const selectedRegion = watch('region');
 
-  // Fetch profile data on initial load
+  // Fetch profile data on initial load, only once per session
   useEffect(() => {
-    // Create an async function inside the effect
+    // Only fetch when user UID is available and not already loaded
+    if (!userDetails?.uid || hasLoadedProfile) return;
     const fetchProfileData = async () => {
-      // Only fetch if we haven't already loaded and we have user's UID
-      if (!hasLoadedProfile && userDetails?.uid) {
-        setIsLoading(true);
-
-        // Get user ID from the user details (using only UID for security)
-        const userId = userDetails.uid;
-
-        // Fetch profile data from API using try-catch
-        try {
-          const response = await fetch(`/api/profile?userId=${userId}`);
-          const data = await response.json();
-
-          if (data.success && data.profile) {
-            // Update profile in Redux store
-            dispatch(updateProfile(data.profile));
-
-            // Mark as loaded in session storage
-            sessionStorage.setItem('profileLoaded', 'true');
-            setHasLoadedProfile(true);
-
-            // Log the profile data retrieved from database for debugging
-            console.log('Profile loaded from DB:', data.profile);
-          }
-        } catch (error) {
-          console.error('Error fetching profile:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load profile data',
-            variant: 'destructive',
-          });
-        } finally {
-          setIsLoading(false);
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/profile?userId=${userDetails.uid}`);
+        const data = await response.json();
+        if (data.success && data.profile) {
+          dispatch(updateProfile(data.profile));
+          console.log('Profile loaded from DB:', data.profile);
         }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load profile data',
+          variant: 'destructive',
+        });
+      } finally {
+        // Persist load flag to prevent infinite fetch attempts
+        sessionStorage.setItem('profileLoaded', 'true');
+        setHasLoadedProfile(true);
+        setIsLoading(false);
       }
     };
-
-    // Call the async function
     fetchProfileData();
-  }, [dispatch, hasLoadedProfile, userDetails, toast]);
+  }, [userDetails?.uid, hasLoadedProfile, dispatch, toast]);
 
   // Keep form in sync with store if profile changes
   useEffect(() => {

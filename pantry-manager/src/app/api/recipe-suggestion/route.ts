@@ -9,7 +9,7 @@ const model = new ChatGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-console.log('Using API KEY:', process.env.GROQ_API_KEY);
+// console.log('Using API KEY:', process.env.GROQ_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,7 +20,9 @@ export async function POST(req: NextRequest) {
       new SystemMessage(
         `You're a recipe generator. Suggest 3 creative recipes using: ${pantryItems.join(
           ', '
-        )}. Return as JSON array with id, title, description, imageUrl:(use 'https://picsum.photos/600/400' with different seed numbers like '?random=1', '?random=2', etc. for reliable placeholder food images), ingredients, inPantry: list of ingredients that are in the pantry, missing: list of ingredients that are missing in the pantry, and estimatedTime.`
+        )}. Return as JSON array with id, title, description, imageUrl:(use 'https://picsum.photos/600/400' with different seed numbers like '?random=1', '?random=2', etc. for reliable placeholder food images), ingredients, inPantry: list of ingredients that are in the pantry, missing: list of ingredients
+         that are missing in the pantry, and estimatedTime strictly follow the 
+         the return format do not add any extra text just return the response in the said format i only need the json.`
       ),
       new HumanMessage('Generate the recipes.'),
     ]);

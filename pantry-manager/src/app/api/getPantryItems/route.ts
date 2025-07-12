@@ -6,7 +6,7 @@ import { DbPantryItem } from '@/lib/types';
 export async function GET(req: NextRequest) {
   try {
     await connectDb();
-    const searchParams = new URL(req.url).searchParams;
+    const searchParams = req.nextUrl.searchParams;
     const userId = searchParams.get('userId');
 
     if (!userId) {

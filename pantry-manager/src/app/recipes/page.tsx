@@ -187,7 +187,7 @@ export default function RecipesPage() {
     );
   };
 
-  const filteredRecipes = suggestedRecipes.filter((recipe) => {
+  const filteredRecipes = (suggestedRecipes || []).filter((recipe) => {
     const matchesSearch = recipe.title
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
