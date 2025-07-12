@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/hooks/db';
 import User from '@/models/users';
 
-// GET handler to get user profile
-export async function GET(req: NextRequest) {
+// POST handler to get user profile
+export async function POST(req: NextRequest) {
   // Ensure database connection is established per request
   await dbConnect();
-  console.log('Database connection established for GET /api/profile');
+  console.log('Database connection established for POST /api/profile');
   try {
-    const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    const { userId } = await req.json();
 
     if (!userId) {
       return NextResponse.json(

@@ -3,11 +3,10 @@ import User from '@/models/users';
 import { NextRequest, NextResponse } from 'next/server';
 import { DbPantryItem } from '@/lib/types';
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     await connectDb();
-    const searchParams = req.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    const { userId } = await req.json();
 
     if (!userId) {
       return NextResponse.json(

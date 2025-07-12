@@ -90,7 +90,13 @@ export const fetchPantryItems = createAsyncThunk(
   async (userId: string, { rejectWithValue }) => {
     try {
       console.log(`Fetching pantry items for user: ${userId}`);
-      const response = await fetch(`/api/getPantryItems?userId=${userId}`);
+      const response = await fetch('/api/getPantryItems', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
       if (!response.ok) {
         const errorData = await response.json();
         return rejectWithValue(

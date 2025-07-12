@@ -128,7 +128,11 @@ export default function ProfilePage() {
     const fetchProfileData = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/profile?userId=${userDetails.uid}`);
+        const response = await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userDetails.uid }),
+        });
         const data = await response.json();
         if (data.success && data.profile) {
           dispatch(updateProfile(data.profile));
@@ -224,8 +228,8 @@ export default function ProfilePage() {
 
     // Save to database via API using try-catch for consistency
     try {
-      const response = await fetch('/api/profile-update', {
-        method: 'POST',
+      const response = await fetch('/api/profile', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
